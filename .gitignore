@@ -1,0 +1,13 @@
+node_modules
+.pnpm-store
+dist
+npm
+.turbo
+.DS_Store
+coverage
+.next
+.datajam
+.datajam-runtime.json
+.env
+.env.*
+!.env.example

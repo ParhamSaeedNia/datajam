@@ -1,0 +1,36 @@
+{
+  "name": "@datajam/dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --tsconfig tsconfig.build.json && next build",
+    "build:server": "tsup src/index.ts --format esm --dts --tsconfig tsconfig.build.json",
+    "lint": "eslint src app --ext .ts --ext .tsx",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@datajam/analytics": "workspace:*",
+    "@datajam/storage-sqlite": "workspace:*",
+    "@datajam/types": "workspace:*",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.13.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.20",
+    "tailwindcss": "^3.4.16"
+  }
+}

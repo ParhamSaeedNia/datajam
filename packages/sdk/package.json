@@ -1,0 +1,38 @@
+{
+  "name": "datajam",
+  "version": "0.1.1",
+  "description": "Local-first analytics SDK for syncing Stripe data",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "datajam": "dist/bin.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/bin.ts --format esm --dts",
+    "build:publish": "node ../../scripts/prepare-npm-publish.mjs",
+    "dev": "tsup src/index.ts src/bin.ts --watch --format esm --dts",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@datajam/analytics": "workspace:*",
+    "@datajam/connector-stripe": "workspace:*",
+    "@datajam/core": "workspace:*",
+    "@datajam/dashboard": "workspace:*",
+    "@datajam/storage-sqlite": "workspace:*",
+    "@datajam/types": "workspace:*",
+    "commander": "^12.1.0"
+  }
+}
