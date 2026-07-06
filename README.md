@@ -18,7 +18,7 @@ const datajam = new DataJam({
 });
 
 await datajam.sync();
-await datajam.dashboard();
+await datajam.dashboard(); 
 ```
 
 ## CLI
