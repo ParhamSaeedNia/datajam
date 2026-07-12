@@ -45,6 +45,26 @@ export interface DataJamOptions {
   logLevel?: "debug" | "info" | "warn" | "error";
 }
 
+export interface TrackingEventInput {
+  anonymousId: string;
+  sessionId: string;
+  eventName: string;
+  eventType: "page_view" | "click" | "custom";
+  path: string;
+  url?: string;
+  title?: string;
+  referrer?: string;
+  source?: string;
+  medium?: string;
+  campaign?: string;
+  properties?: Record<string, unknown>;
+  userAgent?: string;
+  language?: string;
+  screenWidth?: number;
+  screenHeight?: number;
+  occurredAt?: string;
+}
+
 export interface SyncSummary {
   runId: string;
   mode: SyncMode;
@@ -117,6 +137,7 @@ export interface StorageAdapter {
 
   upsertRawObject(input: RawObjectInput): Promise<{ changed: boolean }>;
   upsertNormalizedRecord(input: NormalizedRecordInput): Promise<void>;
+  insertTrackingEvent(input: TrackingEventInput): Promise<void>;
 
   getAnalyticsPoint(sql: string, params?: unknown[]): Promise<Record<string, unknown>>;
   getAnalyticsRows(sql: string, params?: unknown[]): Promise<Array<Record<string, unknown>>>;

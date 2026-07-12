@@ -26,6 +26,21 @@ export interface DashboardMetrics {
   lifetimeValue: number;
 }
 
+export interface WebAnalyticsSummary {
+  pageViews: number;
+  visitors: number;
+  sessions: number;
+  events: number;
+}
+
+export interface WebAnalyticsOverview {
+  summary: WebAnalyticsSummary;
+  topPages: Array<{ path: string; views: number }>;
+  topReferrers: Array<{ referrer: string; views: number }>;
+  topEvents: Array<{ eventName: string; count: number }>;
+  pageViewsOverTime: Array<{ day: string; views: number }>;
+}
+
 export class AnalyticsService {
   public constructor(private readonly storage: StorageAdapter) {}
 
@@ -135,5 +150,70 @@ export class AnalyticsService {
       name: String(row.product_name ?? "unknown"),
       revenue: Number(row.revenue_cents ?? 0) / 100
     }));
+  }
+
+  public async getWebAnalyticsOverview(): Promise<WebAnalyticsOverview> {
+    const summary = await this.storage.getAnalyticsPoint(`
+      SELECT
+        (SELECT COUNT(*) FROM page_views) AS page_views,
+        (SELECT COUNT(*) FROM visitors) AS visitors,
+        (SELECT COUNT(*) FROM sessions) AS sessions,
+        (SELECT COUNT(*) FROM events) AS events
+    `);
+    const [topPages, topReferrers, topEvents, pageViewsOverTime] = await Promise.all([
+      this.storage.getAnalyticsRows(`
+        SELECT path, COUNT(*) AS views
+        FROM page_views
+        GROUP BY path
+        ORDER BY views DESC
+        LIMIT 10
+      `),
+      this.storage.getAnalyticsRows(`
+        SELECT COALESCE(NULLIF(referrer, ''), 'direct') AS referrer, COUNT(*) AS views
+        FROM page_views
+        GROUP BY COALESCE(NULLIF(referrer, ''), 'direct')
+        ORDER BY views DESC
+        LIMIT 10
+      `),
+      this.storage.getAnalyticsRows(`
+        SELECT event_name, COUNT(*) AS count
+        FROM events
+        WHERE event_type != 'page_view'
+        GROUP BY event_name
+        ORDER BY count DESC
+        LIMIT 10
+      `),
+      this.storage.getAnalyticsRows(`
+        SELECT date(occurred_at) AS day, COUNT(*) AS views
+        FROM page_views
+        GROUP BY date(occurred_at)
+        ORDER BY day ASC
+      `)
+    ]);
+
+    return {
+      summary: {
+        pageViews: Number(summary.page_views ?? 0),
+        visitors: Number(summary.visitors ?? 0),
+        sessions: Number(summary.sessions ?? 0),
+        events: Number(summary.events ?? 0)
+      },
+      topPages: topPages.map((row) => ({
+        path: String(row.path ?? "unknown"),
+        views: Number(row.views ?? 0)
+      })),
+      topReferrers: topReferrers.map((row) => ({
+        referrer: String(row.referrer ?? "direct"),
+        views: Number(row.views ?? 0)
+      })),
+      topEvents: topEvents.map((row) => ({
+        eventName: String(row.event_name ?? "unknown"),
+        count: Number(row.count ?? 0)
+      })),
+      pageViewsOverTime: pageViewsOverTime.map((row) => ({
+        day: String(row.day ?? "unknown"),
+        views: Number(row.views ?? 0)
+      }))
+    };
   }
 }

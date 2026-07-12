@@ -58,6 +58,10 @@ const publishPackage = {
     ".": {
       types: "./dist/index.d.ts",
       import: "./dist/index.js"
+    },
+    "./browser": {
+      types: "./dist/browser.d.ts",
+      import: "./dist/browser.js"
     }
   },
   engines: {
@@ -68,6 +72,8 @@ const publishPackage = {
   dependencies: publishedDependencies
 };
 
+await cp(join(root, "README.md"), join(publishDir, "README.md"));
+await cp(join(root, "LICENSE"), join(publishDir, "LICENSE"));
 await writeFile(join(publishDir, "package.json"), `${JSON.stringify(publishPackage, null, 2)}\n`, "utf8");
 
 console.log(`\nPublish staging ready at: ${publishDir}`);

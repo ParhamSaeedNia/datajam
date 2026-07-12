@@ -11,14 +11,15 @@ export async function handleOverviewRequest(
   try {
     await storage.init();
     const analytics = new AnalyticsService(storage);
-    const [metrics, revenueOverTime, topProducts] = await Promise.all([
+    const [metrics, revenueOverTime, topProducts, webAnalytics] = await Promise.all([
       analytics.getDashboardMetrics(),
       analytics.getRevenueOverTime(),
-      analytics.getTopProducts()
+      analytics.getTopProducts(),
+      analytics.getWebAnalyticsOverview()
     ]);
 
     response.writeHead(200, { "Content-Type": "application/json" });
-    response.end(JSON.stringify({ metrics, revenueOverTime, topProducts }));
+    response.end(JSON.stringify({ metrics, revenueOverTime, topProducts, webAnalytics }));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load dashboard metrics";
     response.writeHead(500, { "Content-Type": "application/json" });

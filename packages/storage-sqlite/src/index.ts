@@ -9,7 +9,8 @@ import type {
   RawObjectInput,
   StorageAdapter,
   StripeResourceName,
-  SyncMode
+  SyncMode,
+  TrackingEventInput
 } from "@datajam/types";
 
 const RESOURCE_TABLES: Record<StripeResourceName, string> = {
@@ -81,6 +82,60 @@ export class SqliteStorageAdapter implements StorageAdapter {
 
       CREATE INDEX IF NOT EXISTS idx_raw_resource_created
       ON stripe_raw_objects(resource_type, object_created);
+
+      CREATE TABLE IF NOT EXISTS visitors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        anonymous_id TEXT NOT NULL UNIQUE,
+        first_seen_at TEXT NOT NULL,
+        last_seen_at TEXT NOT NULL,
+        user_agent TEXT,
+        language TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL UNIQUE,
+        anonymous_id TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        last_seen_at TEXT NOT NULL,
+        entry_path TEXT,
+        referrer TEXT,
+        source TEXT,
+        medium TEXT,
+        campaign TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS page_views (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        anonymous_id TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        path TEXT NOT NULL,
+        url TEXT,
+        title TEXT,
+        referrer TEXT,
+        source TEXT,
+        medium TEXT,
+        campaign TEXT,
+        properties_json TEXT NOT NULL,
+        occurred_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        anonymous_id TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        event_name TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        path TEXT NOT NULL,
+        url TEXT,
+        properties_json TEXT NOT NULL,
+        occurred_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_page_views_occurred_at ON page_views(occurred_at);
+      CREATE INDEX IF NOT EXISTS idx_page_views_path ON page_views(path);
+      CREATE INDEX IF NOT EXISTS idx_events_name ON events(event_name);
+      CREATE INDEX IF NOT EXISTS idx_events_occurred_at ON events(occurred_at);
     `);
 
     for (const tableName of Object.values(RESOURCE_TABLES)) {
@@ -254,6 +309,93 @@ export class SqliteStorageAdapter implements StorageAdapter {
       JSON.stringify(input.data),
       new Date().toISOString()
     );
+  }
+
+  public async insertTrackingEvent(input: TrackingEventInput): Promise<void> {
+    const occurredAt = input.occurredAt ?? new Date().toISOString();
+    const propertiesJson = JSON.stringify(input.properties ?? {});
+
+    const transaction = this.db.transaction(() => {
+      this.db
+        .prepare(
+          `
+          INSERT INTO visitors (anonymous_id, first_seen_at, last_seen_at, user_agent, language)
+          VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT(anonymous_id) DO UPDATE SET
+            last_seen_at = excluded.last_seen_at,
+            user_agent = COALESCE(excluded.user_agent, visitors.user_agent),
+            language = COALESCE(excluded.language, visitors.language)
+        `
+        )
+        .run(input.anonymousId, occurredAt, occurredAt, input.userAgent ?? null, input.language ?? null);
+
+      this.db
+        .prepare(
+          `
+          INSERT INTO sessions
+          (session_id, anonymous_id, started_at, last_seen_at, entry_path, referrer, source, medium, campaign)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(session_id) DO UPDATE SET
+            last_seen_at = excluded.last_seen_at
+        `
+        )
+        .run(
+          input.sessionId,
+          input.anonymousId,
+          occurredAt,
+          occurredAt,
+          input.path,
+          input.referrer ?? null,
+          input.source ?? null,
+          input.medium ?? null,
+          input.campaign ?? null
+        );
+
+      if (input.eventType === "page_view") {
+        this.db
+          .prepare(
+            `
+            INSERT INTO page_views
+            (anonymous_id, session_id, path, url, title, referrer, source, medium, campaign, properties_json, occurred_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `
+          )
+          .run(
+            input.anonymousId,
+            input.sessionId,
+            input.path,
+            input.url ?? null,
+            input.title ?? null,
+            input.referrer ?? null,
+            input.source ?? null,
+            input.medium ?? null,
+            input.campaign ?? null,
+            propertiesJson,
+            occurredAt
+          );
+      }
+
+      this.db
+        .prepare(
+          `
+          INSERT INTO events
+          (anonymous_id, session_id, event_name, event_type, path, url, properties_json, occurred_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `
+        )
+        .run(
+          input.anonymousId,
+          input.sessionId,
+          input.eventName,
+          input.eventType,
+          input.path,
+          input.url ?? null,
+          propertiesJson,
+          occurredAt
+        );
+    });
+
+    transaction();
   }
 
   public async getAnalyticsPoint(sql: string, params: unknown[] = []): Promise<Record<string, unknown>> {

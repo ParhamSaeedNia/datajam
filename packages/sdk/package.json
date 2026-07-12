@@ -1,7 +1,7 @@
 {
   "name": "datajam",
-  "version": "0.1.1",
-  "description": "Local-first analytics SDK for syncing Stripe data",
+  "version": "0.2.0",
+  "description": "Local-first Stripe and product analytics SDK for Node.js",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
@@ -16,12 +16,16 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts src/bin.ts --format esm --dts",
+    "build": "tsup src/index.ts src/bin.ts src/browser.ts --format esm --dts",
     "build:publish": "node ../../scripts/prepare-npm-publish.mjs",
-    "dev": "tsup src/index.ts src/bin.ts --watch --format esm --dts",
+    "dev": "tsup src/index.ts src/bin.ts src/browser.ts --watch --format esm --dts",
     "lint": "eslint src --ext .ts",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc -p tsconfig.json --noEmit"

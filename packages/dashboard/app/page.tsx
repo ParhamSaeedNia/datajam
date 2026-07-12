@@ -7,6 +7,13 @@ type OverviewResponse = {
   metrics: Record<string, number>;
   revenueOverTime: Array<{ month: string; revenue: number; refunds: number }>;
   topProducts: Array<{ productId: string; name: string; revenue: number }>;
+  webAnalytics: {
+    summary: Record<string, number>;
+    topPages: Array<{ path: string; views: number }>;
+    topReferrers: Array<{ referrer: string; views: number }>;
+    topEvents: Array<{ eventName: string; count: number }>;
+    pageViewsOverTime: Array<{ day: string; views: number }>;
+  };
 };
 
 const NUMBER_METRICS = [
@@ -22,6 +29,8 @@ const NUMBER_METRICS = [
   "lifetimeValue",
   "paymentSuccessRate"
 ];
+
+const WEB_METRICS = ["pageViews", "visitors", "sessions", "events"];
 
 export default function DashboardPage() {
   const [data, setData] = useState<OverviewResponse | null>(null);
@@ -100,6 +109,59 @@ export default function DashboardPage() {
           ))}
         </div>
       </section>
+
+      <section className="mt-8 rounded-lg border border-slate-700 p-4">
+        <h2 className="mb-3 text-lg font-semibold">Web Analytics</h2>
+        <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {WEB_METRICS.map((metric) => (
+            <article key={metric} className="rounded-lg border border-slate-700 p-3">
+              <h3 className="mb-1 text-xs uppercase opacity-70">{metric}</h3>
+              <p className="text-lg font-semibold">
+                {(data?.webAnalytics.summary[metric] ?? 0).toFixed(0)}
+              </p>
+            </article>
+          ))}
+        </div>
+        <div className="grid gap-6 md:grid-cols-3">
+          <WebList
+            title="Top Pages"
+            rows={(data?.webAnalytics.topPages ?? []).map((item) => ({
+              label: item.path,
+              value: item.views
+            }))}
+          />
+          <WebList
+            title="Top Referrers"
+            rows={(data?.webAnalytics.topReferrers ?? []).map((item) => ({
+              label: item.referrer,
+              value: item.views
+            }))}
+          />
+          <WebList
+            title="Top Events"
+            rows={(data?.webAnalytics.topEvents ?? []).map((item) => ({
+              label: item.eventName,
+              value: item.count
+            }))}
+          />
+        </div>
+      </section>
     </main>
+  );
+}
+
+function WebList({ title, rows }: { title: string; rows: Array<{ label: string; value: number }> }) {
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-semibold">{title}</h3>
+      <div className="space-y-2">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center justify-between text-sm">
+            <span className="truncate pr-3">{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
